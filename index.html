@@ -1,0 +1,918 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#EFE9DC">
+<title>三段沙漏 · 手沖計時</title>
+<style>
+  :root{
+    --paper:#EFE9DC;
+    --paper-2:#E6DFCF;
+    --ink:#2B2723;
+    --ink-soft:#7C7466;
+    --hair:#CFC6B2;
+    --sand:#B07D4E;
+    --sand-deep:#8E6238;
+    --sand-pour:#8A5A33;
+    --sand-wait:#CBA271;
+    --moss:#4F6152;
+    --glass:#B9B2A1;
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  [hidden]{display:none!important}
+
+  html,body{height:100%}
+  body{
+    margin:0;
+    background:
+      radial-gradient(120% 80% at 50% 0%, #F5F0E5 0%, var(--paper) 45%, var(--paper-2) 100%);
+    color:var(--ink);
+    font-family:"Songti TC","Noto Serif CJK TC","Noto Serif TC","Source Han Serif TC",
+                "Iowan Old Style",Georgia,serif;
+    display:flex;
+    justify-content:center;
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  body::after{  /* 紙纖維 */
+    content:"";position:fixed;inset:0;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>");
+  }
+
+  .wrap{
+    width:100%;max-width:520px;
+    padding:26px 20px 34px;
+    display:flex;flex-direction:column;gap:20px;
+    position:relative;z-index:1;
+  }
+
+  header{text-align:center}
+  .eyebrow{
+    margin:0 0 6px;font-size:11px;letter-spacing:.42em;text-indent:.42em;
+    color:var(--ink-soft);font-family:"Iowan Old Style",Georgia,serif;
+  }
+  h1{margin:0;font-size:26px;font-weight:500;letter-spacing:.28em;text-indent:.28em}
+  .rule{height:1px;background:var(--hair);margin:14px auto 12px;width:64px}
+  .summary{
+    display:block;margin:0 auto;padding:4px 6px;
+    background:none;border:none;cursor:pointer;font-family:inherit;
+    font-size:12px;letter-spacing:.14em;color:var(--ink-soft);
+    font-variant-numeric:tabular-nums;
+  }
+  .summary:active{color:var(--ink)}
+
+  /* ── 沙漏 ── */
+  .glasses{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:end}
+  .glass{
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+    padding:12px 2px 10px;border-radius:3px;margin:0;
+    transition:background .5s ease;
+  }
+  .glass.is-active{background:rgba(79,97,82,.07)}
+  .glass svg{width:100%;height:auto;max-width:104px;display:block}
+
+  .g-name{font-size:14px;letter-spacing:.18em;text-indent:.18em;color:var(--ink-soft);transition:color .4s}
+  .glass.is-active .g-name{color:var(--moss)}
+  .glass.is-done .g-name{color:var(--sand-deep)}
+  .g-time,.g-water{
+    font-size:12px;letter-spacing:.08em;color:var(--ink-soft);
+    font-variant-numeric:tabular-nums;font-family:"Iowan Old Style",Georgia,serif;
+  }
+  .g-water{color:var(--sand-deep)}
+  .g-phase{
+    font-size:10px;letter-spacing:.22em;text-indent:.22em;color:var(--moss);
+    opacity:0;transition:opacity .3s;min-height:1em;
+  }
+  .glass.is-active .g-phase{opacity:1}
+  .g-index{
+    font-size:10px;letter-spacing:.2em;color:var(--hair);
+    font-family:"Iowan Old Style",Georgia,serif;
+  }
+  .sand-top,.sand-pour,.sand-wait,.mound{transition:fill .5s ease}
+  .stream{transition:stroke .5s ease}
+
+  .glasses.tight{gap:4px}
+  .glasses.tight .glass{padding:10px 0 8px}
+  .glasses.tight .g-name{font-size:12px;letter-spacing:.04em;text-indent:0}
+  .glasses.tight .g-time,.glasses.tight .g-water{font-size:10px}
+  .glasses.tight .g-phase{font-size:9px;letter-spacing:.08em;text-indent:0}
+  .glasses.tight .g-index{font-size:9px}
+
+  /* ── 讀數 ── */
+  .readout{text-align:center;padding-top:2px}
+  .now{margin:0 0 4px;font-size:13px;letter-spacing:.34em;text-indent:.34em;color:var(--ink-soft)}
+  .big{
+    margin:0;font-size:60px;line-height:1.05;font-weight:400;
+    letter-spacing:.04em;font-variant-numeric:tabular-nums;
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  }
+  .pour-to{
+    margin:6px 0 0;font-size:15px;letter-spacing:.18em;color:var(--sand-deep);
+    font-variant-numeric:tabular-nums;
+  }
+  .total{margin:5px 0 0;font-size:12px;letter-spacing:.16em;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+  .elapsed{
+    margin:3px 0 0;font-size:12px;letter-spacing:.16em;color:var(--ink-soft);
+    font-variant-numeric:tabular-nums;font-family:"Iowan Old Style",Georgia,serif;
+  }
+
+  /* ── 控制 ── */
+  .controls{display:flex;justify-content:center;align-items:center;gap:12px}
+  button{
+    font-family:inherit;cursor:pointer;border-radius:2px;
+    transition:background .2s,color .2s,border-color .2s,opacity .2s;
+  }
+  button:focus-visible{outline:2px solid var(--moss);outline-offset:3px}
+  .primary{
+    background:var(--ink);color:var(--paper);border:1px solid var(--ink);
+    padding:13px 40px;font-size:15px;letter-spacing:.3em;text-indent:.3em;
+  }
+  .primary:active{background:#413a32}
+  .ghost{
+    background:transparent;color:var(--ink-soft);border:1px solid var(--hair);
+    padding:13px 18px;font-size:14px;letter-spacing:.2em;text-indent:.2em;
+  }
+  .ghost:active{background:rgba(0,0,0,.04)}
+  .ghost:disabled{opacity:.35;cursor:default}
+  .icon{padding:13px 14px;text-indent:0;letter-spacing:0;font-size:16px}
+
+  /* ── 設定 ── */
+  .settings{
+    border-top:1px solid var(--hair);padding-top:18px;
+    display:flex;flex-direction:column;gap:18px;
+  }
+  .set-title{margin:0;font-size:12px;letter-spacing:.3em;color:var(--ink-soft)}
+  .block{display:flex;flex-direction:column;gap:8px}
+  .block-head{display:flex;justify-content:space-between;align-items:baseline}
+  .block-label{font-size:12px;letter-spacing:.24em;color:var(--ink-soft)}
+  .block-value{
+    font-size:12px;letter-spacing:.1em;color:var(--sand-deep);
+    font-variant-numeric:tabular-nums;font-family:"Iowan Old Style",Georgia,serif;
+  }
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{
+    border:1px solid var(--hair);background:transparent;color:var(--ink-soft);
+    padding:7px 12px;font-size:13px;letter-spacing:.06em;
+    font-variant-numeric:tabular-nums;
+  }
+  .chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .recipe-note{margin:2px 0 0;font-size:11px;line-height:1.7;color:var(--ink-soft);letter-spacing:.04em}
+
+  .srow{padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid var(--hair)}
+  .srow:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+  .srow-head{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+  .srow-head input[type=text]{
+    font-family:inherit;font-size:15px;color:var(--ink);
+    background:transparent;border:none;border-bottom:1px solid var(--hair);
+    padding:6px 2px;flex:1;min-width:0;letter-spacing:.12em;
+  }
+  .srow-sum{
+    font-size:12px;color:var(--ink-soft);letter-spacing:.1em;
+    font-variant-numeric:tabular-nums;font-family:"Iowan Old Style",Georgia,serif;
+  }
+  .field{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px}
+  .field-label{font-size:13px;letter-spacing:.18em;color:var(--ink-soft);white-space:nowrap}
+  .field-label i{
+    display:inline-block;width:8px;height:8px;border-radius:50%;
+    margin-right:8px;vertical-align:1px;
+  }
+  .dot-pour{background:var(--sand-pour)}
+  .dot-wait{background:var(--sand-wait)}
+  .stepper{display:flex;align-items:center;gap:2px}
+  .stepper button{
+    background:transparent;border:1px solid var(--hair);color:var(--ink-soft);
+    width:34px;height:34px;font-size:16px;line-height:1;
+  }
+  .stepper input{
+    font-family:"Iowan Old Style",Georgia,serif;font-variant-numeric:tabular-nums;
+    width:54px;text-align:center;font-size:15px;color:var(--ink);
+    background:transparent;border:none;border-bottom:1px solid var(--hair);
+    padding:6px 0;-moz-appearance:textfield;
+  }
+  .stepper input::-webkit-outer-spin-button,
+  .stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .unit{font-size:11px;color:var(--ink-soft);letter-spacing:.1em;width:22px}
+  .locked{opacity:.45}
+  .note{margin:0;font-size:11px;line-height:1.7;color:var(--ink-soft);letter-spacing:.06em}
+
+  @media (max-width:340px){
+    .big{font-size:50px}
+    .primary{padding:12px 28px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .stream{animation:none!important}
+    *{transition-duration:.01ms!important}
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <header>
+    <p class="eyebrow">POUR OVER</p>
+    <h1>三段沙漏</h1>
+    <div class="rule"></div>
+    <button class="summary" id="summaryLine" aria-label="開啟沖煮設定"></button>
+  </header>
+
+  <section class="glasses" id="glasses"></section>
+
+  <section class="readout">
+    <p class="now" id="nowLabel">準備</p>
+    <p class="big" id="bigTime">00:10</p>
+    <p class="pour-to" id="pourTo">注到 36 g</p>
+    <p class="total" id="totalLine">本段 00:30 · 全程 02:00</p>
+    <p class="elapsed" id="elapsedLine">累計 00:00 / 02:00</p>
+  </section>
+
+  <div class="controls">
+    <button class="primary" id="startBtn">開始</button>
+    <button class="ghost" id="resetBtn">重設</button>
+    <button class="ghost icon" id="gearBtn" aria-label="設定" aria-expanded="false">⚙</button>
+  </div>
+
+  <section class="settings" id="settings" hidden>
+
+    <div class="block">
+      <div class="block-head">
+        <span class="block-label">粉重</span>
+        <span class="block-value" id="doseValue"></span>
+      </div>
+      <div class="chips" id="doseChips"></div>
+    </div>
+
+    <div class="block">
+      <div class="block-head">
+        <span class="block-label">粉水比</span>
+        <span class="block-value" id="waterValue"></span>
+      </div>
+      <div class="chips" id="ratioChips"></div>
+    </div>
+
+    <div class="block">
+      <div class="block-head">
+        <span class="block-label">沖法</span>
+        <span class="block-value" id="recipeTime"></span>
+      </div>
+      <div class="chips" id="recipeChips"></div>
+      <p class="recipe-note" id="recipeNote"></p>
+    </div>
+
+    <div class="block">
+      <p class="set-title" id="stageTitle">段落設定</p>
+      <div id="setRows"></div>
+    </div>
+
+    <p class="note">
+      每段再分「注水」與「等待」，任一項填 0 即略過該子段。<br>
+      選了配方時段落秒數會鎖定，切到「自訂」即可自由調整。<br>
+      計時進行中無法修改，按暫停或重設後即可調整。<br>
+      注水轉等待為單聲、段落切換為兩聲、結束為三聲，並伴隨震動（震動僅部分 Android 裝置支援）。
+    </p>
+  </section>
+
+</main>
+
+<script>
+(function(){
+  "use strict";
+
+  var DOSES  = [14, 16, 18, 20, 22];
+  var RATIOS = [12, 14, 15, 16, 18, 20];
+  var PHASE  = { pour:"注水", wait:"等待" };
+  var KEY = "hourglass-brew-v3";
+  var MIN = 0, MAX = 600, STEP = 5;
+
+  // 依「累計克數」定義每個配方的注水目標
+  function evenCums(dose, total, n){
+    var b = Math.min(2 * dose, total), out = [b];
+    for (var k = 1; k < n; k++) out.push(b + (total - b) * k / (n - 1));
+    return out;
+  }
+
+  var RECIPES = [
+    {
+      id:"three", name:"三段式", ratio:15,
+      note:"經典入門：悶蒸後分兩次注水，香氣與口感平衡、層次分明。",
+      stages:[{name:"悶蒸",pour:10,wait:20},{name:"萃取",pour:20,wait:25},{name:"尾段",pour:15,wait:30}],
+      cums:function(d,t){ var b = 2*d; return [b, b + (t-b)*0.5, t]; }
+    },
+    {
+      id:"four6", name:"四六法", ratio:15,
+      note:"粕谷哲 2016 世界沖煮冠軍：五次等量注水、每 45 秒一次，前兩注 40% 調風味、後三注 60% 調濃度，全程約 3:30。",
+      stages:[
+        {name:"一注",pour:10,wait:35},{name:"二注",pour:10,wait:35},
+        {name:"三注",pour:10,wait:35},{name:"四注",pour:10,wait:35},
+        {name:"五注",pour:10,wait:20}
+      ],
+      cums:function(d,t){ return [0.2,0.4,0.6,0.8,1].map(function(x){ return t*x; }); }
+    },
+    {
+      id:"hoff", name:"Hoffmann", ratio:16,
+      note:"James Hoffmann 極致 V60：悶蒸兩倍水靜置 45 秒，30 秒內注到六成，再 30 秒注滿，攪拌後等落下，全程約 3:30。",
+      stages:[
+        {name:"悶蒸",pour:10,wait:35},{name:"主注",pour:30,wait:0},
+        {name:"補注",pour:30,wait:0},{name:"落下",pour:0,wait:105}
+      ],
+      cums:function(d,t){ return [2*d, t*0.6, t, t]; }
+    },
+    {
+      id:"knife3", name:"三刀流", ratio:15,
+      note:"學院派：悶蒸 30 秒後分三刀等量注水，等粉層下沉成碗狀再下一刀，容錯高、尾韻乾淨，全程約 2:25。",
+      stages:[
+        {name:"悶蒸",pour:10,wait:20},{name:"一刀",pour:10,wait:20},
+        {name:"二刀",pour:10,wait:20},{name:"三刀",pour:10,wait:45}
+      ],
+      cums:function(d,t){ var b = 2*d, r = t - b; return [b, b + r/3, b + 2*r/3, t]; }
+    },
+    {
+      id:"custom", name:"自訂", ratio:15,
+      note:"自由設定段落名稱與每段的注水／等待秒數。",
+      stages:null,
+      cums:function(d,t,n){ return evenCums(d,t,n); }
+    }
+  ];
+  var DEFAULT_CUSTOM = [
+    {name:"悶蒸",pour:10,wait:20},{name:"萃取",pour:20,wait:25},{name:"尾段",pour:15,wait:30}
+  ];
+
+  // ── 設定值 ──
+  var dose = 18, ratio = 15, recipeId = "three";
+  var customStages = cloneStages(DEFAULT_CUSTOM);
+  var stages = [];      // 目前生效的段落
+  var cums = [];        // 每段的累計注水目標（克）
+  var steps = [];       // 展開後的子段序列
+
+  // ── 計時狀態 ──
+  var stepIdx = 0, running = false, finished = false, remainMs = 0, endAt = 0;
+
+  // ── DOM ──
+  var glassesEl   = document.getElementById("glasses");
+  var setRowsEl   = document.getElementById("setRows");
+  var nowLabel    = document.getElementById("nowLabel");
+  var bigTime     = document.getElementById("bigTime");
+  var pourToEl    = document.getElementById("pourTo");
+  var totalLine   = document.getElementById("totalLine");
+  var elapsedLine = document.getElementById("elapsedLine");
+  var startBtn    = document.getElementById("startBtn");
+  var resetBtn    = document.getElementById("resetBtn");
+  var gearBtn     = document.getElementById("gearBtn");
+  var settings    = document.getElementById("settings");
+  var summaryLine = document.getElementById("summaryLine");
+  var doseChips   = document.getElementById("doseChips");
+  var ratioChips  = document.getElementById("ratioChips");
+  var recipeChips = document.getElementById("recipeChips");
+  var doseValue   = document.getElementById("doseValue");
+  var waterValue  = document.getElementById("waterValue");
+  var recipeTime  = document.getElementById("recipeTime");
+  var recipeNote  = document.getElementById("recipeNote");
+  var stageTitle  = document.getElementById("stageTitle");
+
+  var views = [];
+
+  // ── 工具 ──
+  function clamp(v,a,b){ return Math.min(b, Math.max(a, v)); }
+  function cloneStages(a){
+    return a.map(function(s){ return { name:s.name, pour:s.pour, wait:s.wait }; });
+  }
+  function recipeOf(id){
+    for (var i=0;i<RECIPES.length;i++) if (RECIPES[i].id === id) return RECIPES[i];
+    return RECIPES[0];
+  }
+  function fmt(ms){
+    var t = Math.max(0, Math.ceil(ms/1000));
+    var m = Math.floor(t/60), s = t%60;
+    return (m<10?"0":"")+m+":"+(s<10?"0":"")+s;
+  }
+  function fmtDown(ms){
+    var t = Math.max(0, Math.floor(ms/1000));
+    var m = Math.floor(t/60), s = t%60;
+    return (m<10?"0":"")+m+":"+(s<10?"0":"")+s;
+  }
+  function elapsedMs(){
+    var all = totalSec() * 1000;
+    if (finished) return all;
+    var e = 0;
+    for (var k=0; k<stepIdx; k++) e += steps[k].sec * 1000;
+    return clamp(e + (curStep().sec * 1000 - remainMs), 0, all);
+  }
+  function escapeAttr(s){
+    return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+  }
+  function stageSec(i){ return stages[i].pour + stages[i].wait; }
+  function totalSec(){
+    return stages.reduce(function(a,s){ return a + s.pour + s.wait; }, 0);
+  }
+  function totalWater(){ return dose * ratio; }
+  function isCustom(){ return recipeId === "custom"; }
+
+  // ── 儲存 ──
+  function save(){
+    try{
+      localStorage.setItem(KEY, JSON.stringify({
+        dose:dose, ratio:ratio, recipe:recipeId, custom:customStages
+      }));
+    }catch(e){}
+  }
+  function load(){
+    try{
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return;
+      var d = JSON.parse(raw);
+      if (DOSES.indexOf(d.dose) >= 0) dose = d.dose;
+      if (RATIOS.indexOf(d.ratio) >= 0) ratio = d.ratio;
+      if (typeof d.recipe === "string" && recipeOf(d.recipe).id === d.recipe) recipeId = d.recipe;
+      if (Array.isArray(d.custom) && d.custom.length){
+        customStages = d.custom.map(function(s,i){
+          var base = DEFAULT_CUSTOM[i] || DEFAULT_CUSTOM[0];
+          var st = {
+            name: (typeof s.name === "string" && s.name.trim()) ? s.name.trim().slice(0,6) : base.name,
+            pour: clamp(parseInt(s.pour,10) || 0, MIN, MAX),
+            wait: clamp(parseInt(s.wait,10) || 0, MIN, MAX)
+          };
+          if (st.pour + st.wait === 0) st.wait = base.wait;
+          return st;
+        });
+      }
+    }catch(e){}
+  }
+
+  // ── 子段序列與注水目標 ──
+  function buildSteps(){
+    steps = [];
+    stages.forEach(function(s, i){
+      if (s.pour > 0) steps.push({ stage:i, kind:"pour", sec:s.pour });
+      if (s.wait > 0) steps.push({ stage:i, kind:"wait", sec:s.wait });
+    });
+    if (!steps.length) steps.push({ stage:0, kind:"wait", sec:30 });
+  }
+  function computeCums(){
+    var r = recipeOf(recipeId), t = totalWater();
+    cums = r.cums(dose, t, stages.length).map(function(g){ return Math.round(g); });
+    while (cums.length < stages.length) cums.push(t);
+  }
+
+  // ── 沙漏 SVG ──
+  var TOP_Y = 14, NECK_Y = 80, BOT_Y = 146;
+  var TOP_H = NECK_Y - TOP_Y, BOT_H = BOT_Y - NECK_Y;
+
+  function buildGlass(i){
+    var uid = "g" + i;
+    var el = document.createElement("figure");
+    el.className = "glass";
+    el.innerHTML =
+      '<svg viewBox="0 0 100 160" role="img" aria-label="第 '+(i+1)+' 段沙漏">' +
+        '<defs>' +
+          '<clipPath id="'+uid+'-top"><path d="M18,'+TOP_Y+' H82 L53,'+NECK_Y+' H47 Z"/></clipPath>' +
+          '<clipPath id="'+uid+'-bot"><path d="M47,'+NECK_Y+' H53 L82,'+BOT_Y+' H18 Z"/></clipPath>' +
+        '</defs>' +
+        '<rect x="10" y="3" width="80" height="7" rx="1.5" fill="none" stroke="var(--ink)" stroke-width="1.1"/>' +
+        '<rect x="10" y="150" width="80" height="7" rx="1.5" fill="none" stroke="var(--ink)" stroke-width="1.1"/>' +
+        '<line x1="16" y1="10" x2="16" y2="150" stroke="var(--hair)" stroke-width="1"/>' +
+        '<line x1="84" y1="10" x2="84" y2="150" stroke="var(--hair)" stroke-width="1"/>' +
+        '<g clip-path="url(#'+uid+'-top)">' +
+          '<rect class="sand-top" x="16" y="'+TOP_Y+'" width="68" height="'+TOP_H+'" fill="var(--sand)"/>' +
+          '<ellipse class="dimple" cx="50" cy="'+TOP_Y+'" rx="34" ry="5" fill="var(--paper)" opacity="0"/>' +
+        '</g>' +
+        '<line class="stream" x1="50" y1="'+NECK_Y+'" x2="50" y2="'+BOT_Y+'" ' +
+          'stroke="var(--sand-deep)" stroke-width="1.5" stroke-linecap="round" ' +
+          'stroke-dasharray="2 5" opacity="0"/>' +
+        '<g clip-path="url(#'+uid+'-bot)">' +
+          '<rect class="sand-pour" x="16" y="'+BOT_Y+'" width="68" height="0" fill="var(--sand-pour)"/>' +
+          '<rect class="sand-wait" x="16" y="'+BOT_Y+'" width="68" height="0" fill="var(--sand-wait)"/>' +
+          '<polygon class="mound" points="38,146 50,140 62,146" fill="var(--sand-wait)" opacity="0"/>' +
+        '</g>' +
+        '<path d="M18,'+TOP_Y+' H82 L53,'+NECK_Y+' H47 Z" fill="none" stroke="var(--glass)" stroke-width="1.2" stroke-linejoin="round"/>' +
+        '<path d="M47,'+NECK_Y+' H53 L82,'+BOT_Y+' H18 Z" fill="none" stroke="var(--glass)" stroke-width="1.2" stroke-linejoin="round"/>' +
+        '<line x1="26" y1="20" x2="38" y2="46" stroke="#FFFFFF" stroke-width="1.6" opacity=".5" stroke-linecap="round"/>' +
+      '</svg>' +
+      '<figcaption style="display:flex;flex-direction:column;align-items:center;gap:3px">' +
+        '<span class="g-index">'+(i+1)+'</span>' +
+        '<span class="g-name"></span>' +
+        '<span class="g-water"></span>' +
+        '<span class="g-time"></span>' +
+        '<span class="g-phase"></span>' +
+      '</figcaption>';
+
+    glassesEl.appendChild(el);
+    views.push({
+      root: el,
+      top: el.querySelector(".sand-top"),
+      dimple: el.querySelector(".dimple"),
+      botPour: el.querySelector(".sand-pour"),
+      botWait: el.querySelector(".sand-wait"),
+      mound: el.querySelector(".mound"),
+      stream: el.querySelector(".stream"),
+      name: el.querySelector(".g-name"),
+      water: el.querySelector(".g-water"),
+      time: el.querySelector(".g-time"),
+      phase: el.querySelector(".g-phase")
+    });
+  }
+  function buildGlasses(){
+    glassesEl.innerHTML = "";
+    views = [];
+    for (var i=0;i<stages.length;i++) buildGlass(i);
+    glassesEl.style.gridTemplateColumns = "repeat(" + stages.length + ",1fr)";
+    glassesEl.classList.toggle("tight", stages.length > 3);
+  }
+
+  // 落砂動畫
+  var st = document.createElement("style");
+  st.textContent = "@keyframes fall{to{stroke-dashoffset:-70}}.stream{animation:fall .9s linear infinite}";
+  document.head.appendChild(st);
+
+  // ── 繪製 ──
+  function curStep(){ return steps[Math.min(stepIdx, steps.length-1)]; }
+
+  function stageElapsedMs(i){
+    if (finished) return stageSec(i) * 1000;
+    var cur = curStep();
+    if (i < cur.stage) return stageSec(i) * 1000;
+    if (i > cur.stage) return 0;
+    var e = 0;
+    for (var k=0; k<stepIdx; k++) if (steps[k].stage === i) e += steps[k].sec * 1000;
+    return e + (cur.sec * 1000 - remainMs);
+  }
+  function stageRemainMs(i){
+    return Math.max(0, stageSec(i)*1000 - stageElapsedMs(i));
+  }
+  function progressOf(i){
+    var t = stageSec(i) * 1000;
+    if (t <= 0) return finished ? 1 : (i < curStep().stage ? 1 : 0);
+    return clamp(stageElapsedMs(i) / t, 0, 1);
+  }
+  function addedAt(i){
+    return cums[i] - (i === 0 ? 0 : cums[i-1]);
+  }
+
+  function render(){
+    var cur = curStep();
+    var css = getComputedStyle(document.documentElement);
+    var C_POUR = css.getPropertyValue("--sand-pour").trim() || "#8A5A33";
+    var C_WAIT = css.getPropertyValue("--sand-wait").trim() || "#CBA271";
+
+    for (var i=0;i<stages.length;i++){
+      var v = views[i], p = progressOf(i), s = stages[i];
+      var isActive = (i === cur.stage) && !finished;
+      var total = stageSec(i);
+      var pourFrac = total > 0 ? s.pour / total : 0;
+
+      var level = TOP_Y + TOP_H * p;
+      v.top.setAttribute("y", level.toFixed(2));
+      v.top.setAttribute("height", (TOP_H - TOP_H * p).toFixed(2));
+      v.dimple.setAttribute("cy", (level + 1).toFixed(2));
+      v.dimple.setAttribute("opacity", (p > 0.02 && p < 0.98) ? "0.55" : "0");
+
+      v.top.style.fill = isActive
+        ? (cur.kind === "pour" ? C_POUR : C_WAIT)
+        : (p >= 1 ? C_WAIT : (pourFrac > 0 ? C_POUR : C_WAIT));
+
+      var hAll  = BOT_H * p;
+      var hPour = BOT_H * Math.min(p, pourFrac);
+      var hWait = hAll - hPour;
+      v.botPour.setAttribute("y", (BOT_Y - hPour).toFixed(2));
+      v.botPour.setAttribute("height", hPour.toFixed(2));
+      v.botWait.setAttribute("y", (BOT_Y - hAll).toFixed(2));
+      v.botWait.setAttribute("height", Math.max(0, hWait).toFixed(2));
+
+      if (hAll > 3){
+        var top = BOT_Y - hAll;
+        var half = 6 + 8 * p;
+        v.mound.setAttribute("points",
+          (50-half)+","+top.toFixed(2)+" 50,"+(top-5).toFixed(2)+" "+(50+half)+","+top.toFixed(2));
+        v.mound.setAttribute("opacity","1");
+        v.mound.style.fill = (hWait > 0.5) ? C_WAIT : C_POUR;
+      } else {
+        v.mound.setAttribute("opacity","0");
+      }
+
+      v.stream.setAttribute("opacity", (isActive && running) ? "0.9" : "0");
+      v.stream.style.stroke = (cur.kind === "pour") ? C_POUR : C_WAIT;
+
+      v.name.textContent = s.name;
+      v.water.textContent = addedAt(i) > 0 ? (cums[i] + " g") : "—";
+      v.time.textContent = fmt(finished ? 0 : stageRemainMs(i));
+      v.phase.textContent = isActive ? PHASE[cur.kind] : "";
+
+      v.root.classList.toggle("is-active", isActive);
+      v.root.classList.toggle("is-done", finished || i < cur.stage);
+    }
+
+    if (finished){
+      nowLabel.textContent = "完成";
+      bigTime.textContent = "00:00";
+      pourToEl.textContent = "共 " + totalWater() + " g";
+      totalLine.textContent = "本段 00:00 · 全程 " + fmt(totalSec()*1000);
+    } else {
+      nowLabel.textContent = isFresh()
+        ? "準備"
+        : stages[cur.stage].name + " · " + PHASE[cur.kind];
+      bigTime.textContent = fmt(remainMs);
+      pourToEl.textContent = addedAt(cur.stage) > 0
+        ? "注到 " + cums[cur.stage] + " g"
+        : "不注水，等落下";
+      totalLine.textContent = "本段 " + fmt(stageRemainMs(cur.stage)) +
+                              " · 全程 " + fmt(totalSec()*1000);
+    }
+
+    elapsedLine.textContent = "累計 " + fmtDown(elapsedMs()) + " / " + fmt(totalSec()*1000);
+
+    startBtn.textContent = finished ? "再沖一次" : (running ? "暫停" : (isFresh() ? "開始" : "繼續"));
+    gearBtn.disabled = running;
+    summaryLine.textContent =
+      dose + " g · 1:" + ratio + " · " + recipeOf(recipeId).name + " · " + totalWater() + " g";
+  }
+
+  function isFresh(){
+    return !running && !finished && stepIdx === 0 && remainMs === steps[0].sec*1000;
+  }
+
+  // ── 計時迴圈 ──
+  function tick(){
+    if (running){
+      remainMs = endAt - performance.now();
+      if (remainMs <= 0){
+        remainMs = 0;
+        advance();
+      }
+      render();
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  function advance(){
+    var prev = steps[stepIdx];
+    if (stepIdx < steps.length - 1){
+      stepIdx++;
+      var next = steps[stepIdx];
+      remainMs = next.sec * 1000;
+      endAt = performance.now() + remainMs;
+      if (next.stage === prev.stage){
+        chime([784], 0.14, 0.13);            // 同段內：注水 → 等待
+        buzz([60]);
+      } else {
+        chime([660, 880], 0.16, 0.22);       // 換段
+        buzz([130]);
+      }
+    } else {
+      running = false;
+      finished = true;
+      chime([880, 660, 523], 0.32, 0.24);    // 結束
+      buzz([200,100,200,100,340]);
+      releaseWake();
+    }
+  }
+
+  // ── 操作 ──
+  function start(){
+    if (finished) reset();
+    unlockAudio();
+    running = true;
+    endAt = performance.now() + remainMs;
+    requestWake();
+    closeSettings();
+    render();
+  }
+  function pause(){
+    running = false;
+    remainMs = Math.max(0, endAt - performance.now());
+    releaseWake();
+    render();
+  }
+  function reset(){
+    running = false; finished = false; stepIdx = 0;
+    remainMs = steps[0].sec * 1000;
+    releaseWake();
+    render();
+  }
+
+  startBtn.addEventListener("click", function(){
+    if (running) pause(); else start();
+  });
+  resetBtn.addEventListener("click", reset);
+
+  gearBtn.addEventListener("click", function(){
+    if (settings.hidden) openSettings(); else closeSettings();
+  });
+  summaryLine.addEventListener("click", function(){
+    if (running) return;
+    if (settings.hidden) openSettings(); else closeSettings();
+  });
+  function openSettings(){
+    settings.hidden = false;
+    gearBtn.setAttribute("aria-expanded","true");
+  }
+  function closeSettings(){
+    settings.hidden = true;
+    gearBtn.setAttribute("aria-expanded","false");
+  }
+
+  // ── 前置設定：粉重 / 粉水比 / 沖法 ──
+  function buildChips(){
+    doseChips.innerHTML = "";
+    DOSES.forEach(function(g){
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "chip"; b.dataset.dose = g; b.textContent = g + " g";
+      b.addEventListener("click", function(){ setDose(g); });
+      doseChips.appendChild(b);
+    });
+    ratioChips.innerHTML = "";
+    RATIOS.forEach(function(r){
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "chip"; b.dataset.ratio = r; b.textContent = "1:" + r;
+      b.addEventListener("click", function(){ setRatio(r); });
+      ratioChips.appendChild(b);
+    });
+    recipeChips.innerHTML = "";
+    RECIPES.forEach(function(r){
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "chip"; b.dataset.recipe = r.id; b.textContent = r.name;
+      b.addEventListener("click", function(){ setRecipe(r.id); });
+      recipeChips.appendChild(b);
+    });
+  }
+  function syncChips(){
+    [].forEach.call(doseChips.children, function(b){
+      b.classList.toggle("on", +b.dataset.dose === dose);
+    });
+    [].forEach.call(ratioChips.children, function(b){
+      b.classList.toggle("on", +b.dataset.ratio === ratio);
+    });
+    [].forEach.call(recipeChips.children, function(b){
+      b.classList.toggle("on", b.dataset.recipe === recipeId);
+    });
+    doseValue.textContent  = dose + " g";
+    waterValue.textContent = "總水量 " + totalWater() + " g";
+    recipeTime.textContent = "全程 " + fmt(totalSec()*1000);
+    recipeNote.textContent = recipeOf(recipeId).note;
+    stageTitle.textContent = isCustom() ? "段落設定" : "段落設定（配方鎖定）";
+  }
+  function setDose(g){
+    if (running) return;
+    dose = g; save(); computeCums(); syncChips(); render();
+  }
+  function setRatio(r){
+    if (running) return;
+    ratio = r; save(); computeCums(); syncChips(); render();
+  }
+  function setRecipe(id){
+    if (running) return;
+    recipeId = id;
+    var r = recipeOf(id);
+    ratio = r.ratio;
+    save();
+    applyRecipe();
+  }
+  function applyRecipe(){
+    var r = recipeOf(recipeId);
+    stages = isCustom() ? customStages : cloneStages(r.stages);
+    buildSteps();
+    computeCums();
+    buildGlasses();
+    buildRows();
+    reset();
+    syncChips();
+    render();
+  }
+
+  // ── 段落設定列 ──
+  function buildRows(){
+    setRowsEl.innerHTML = "";
+    setRowsEl.classList.toggle("locked", !isCustom());
+    stages.forEach(function(s, i){
+      var row = document.createElement("div");
+      row.className = "srow";
+      row.innerHTML =
+        '<div class="srow-head">' +
+          '<input type="text" maxlength="6" value="'+escapeAttr(s.name)+'" aria-label="第 '+(i+1)+' 段名稱">' +
+          '<span class="srow-sum" data-sum></span>' +
+        '</div>' +
+        field(i, "pour", s.pour) +
+        field(i, "wait", s.wait);
+
+      var nameIn = row.querySelector('input[type=text]');
+      nameIn.disabled = !isCustom();
+      nameIn.addEventListener("input", function(){
+        stages[i].name = nameIn.value.trim() || ("第" + (i+1) + "段");
+        save(); render();
+      });
+
+      [].forEach.call(row.querySelectorAll(".field"), function(f){
+        var kind = f.dataset.kind;
+        var numIn = f.querySelector("input[type=number]");
+        numIn.disabled = !isCustom();
+        numIn.addEventListener("change", function(){
+          applySec(i, kind, clamp(parseInt(numIn.value,10) || 0, MIN, MAX), row);
+        });
+        [].forEach.call(f.querySelectorAll(".stepper button"), function(b){
+          b.disabled = !isCustom();
+          b.addEventListener("click", function(){
+            var v = clamp((parseInt(numIn.value,10)||0) + STEP * parseInt(b.dataset.d,10), MIN, MAX);
+            applySec(i, kind, v, row);
+          });
+        });
+      });
+
+      setRowsEl.appendChild(row);
+      syncRow(i, row);
+    });
+  }
+  function field(i, kind, val){
+    return '<div class="field" data-kind="'+kind+'">' +
+      '<span class="field-label"><i class="dot-'+kind+'"></i>'+PHASE[kind]+'</span>' +
+      '<span class="stepper">' +
+        '<button type="button" data-d="-1" aria-label="減少">−</button>' +
+        '<input type="number" min="'+MIN+'" max="'+MAX+'" step="'+STEP+'" value="'+val+'" ' +
+          'aria-label="第 '+(i+1)+' 段'+PHASE[kind]+'秒數">' +
+        '<button type="button" data-d="1" aria-label="增加">+</button>' +
+        '<span class="unit">秒</span>' +
+      '</span>' +
+    '</div>';
+  }
+  function syncRow(i, row){
+    [].forEach.call(row.querySelectorAll(".field"), function(f){
+      f.querySelector("input[type=number]").value = stages[i][f.dataset.kind];
+    });
+    row.querySelector("[data-sum]").textContent = "小計 " + fmt(stageSec(i)*1000);
+  }
+  function applySec(i, kind, v, row){
+    if (!isCustom()) return;
+    var other = (kind === "pour") ? "wait" : "pour";
+    stages[i][kind] = v;
+    if (stages[i].pour + stages[i].wait === 0) stages[i][other] = STEP;
+    save();
+    buildSteps();
+    if (!running) reset();
+    syncRow(i, row);
+    syncChips();
+    render();
+  }
+
+  // ── 音效 ──
+  var ac = null;
+  function unlockAudio(){
+    try{
+      if (!ac){
+        var C = window.AudioContext || window.webkitAudioContext;
+        if (!C) return;
+        ac = new C();
+      }
+      if (ac.state === "suspended") ac.resume();
+    }catch(e){ ac = null; }
+  }
+  function chime(freqs, dur, vol){
+    if (!ac) return;
+    var peak = vol || 0.22;
+    try{
+      freqs.forEach(function(f, n){
+        var t0 = ac.currentTime + n * dur * 0.62;
+        var osc = ac.createOscillator();
+        var gain = ac.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(f, t0);
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.exponentialRampToValueAtTime(peak, t0 + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        osc.connect(gain); gain.connect(ac.destination);
+        osc.start(t0); osc.stop(t0 + dur + 0.05);
+      });
+    }catch(e){}
+  }
+  function buzz(pattern){
+    try{ if (navigator.vibrate) navigator.vibrate(pattern); }catch(e){}
+  }
+
+  // ── 螢幕常亮 ──
+  var wake = null;
+  function requestWake(){
+    try{
+      if (!navigator.wakeLock) return;
+      navigator.wakeLock.request("screen").then(function(w){ wake = w; }).catch(function(){});
+    }catch(e){}
+  }
+  function releaseWake(){
+    try{ if (wake){ wake.release(); wake = null; } }catch(e){}
+  }
+  document.addEventListener("visibilitychange", function(){
+    if (document.visibilityState === "visible" && running) requestWake();
+  });
+
+  // ── 空白鍵 ──
+  document.addEventListener("keydown", function(e){
+    if (e.code === "Space" && e.target === document.body){
+      e.preventDefault();
+      if (running) pause(); else start();
+    }
+  });
+
+  // ── 啟動 ──
+  load();
+  buildChips();
+  applyRecipe();
+})();
+</script>
+</body>
+</html>
