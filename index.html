@@ -24,6 +24,7 @@
     --brew-deep:#6B4226;
     --brew-pour:#5C3A22;
     --brew-wait:#9C6B45;
+    --grounds:#3E2A1B;
     --steel:#9A9384;
     --moss:#4F6152;
     --glass:#B9B2A1;
@@ -498,6 +499,42 @@
   var LIQ_TOP = 178, LIQ_BOT = 254;           // 分享壺液面範圍
   var LIQ_H = LIQ_BOT - LIQ_TOP;
   var scene = {};
+  var BED_H = 20;                             // 靜止時的粉床厚度
+  var GRAINS = [];                            // 固定亂數種子，讓顆粒分布自然又不跳動
+  (function(){
+    var s = 20250830;
+    function rnd(){ s = (s * 1103515245 + 12345) % 2147483648; return s / 2147483648; }
+    for (var i=0;i<96;i++) GRAINS.push({ x:rnd()*2-1, h:rnd(), ph:rnd()*6.28, sp:2.0+rnd()*2.4, r:0.5+rnd()*0.45 });
+  })();
+  var BUBS = [];                              // 悶蒸氣泡：位置、速度、大小各不相同
+  (function(){
+    var s = 77003;
+    function rnd(){ s = (s * 1103515245 + 12345) % 2147483648; return s / 2147483648; }
+    for (var i=0;i<11;i++) BUBS.push({ x:(rnd()*2-1)*0.75, off:rnd(), sp:0.5+rnd()*0.55, r:1.0+rnd()*1.4 });
+  })();
+  function bubbleDots(){
+    var s = "";
+    for (var i=0;i<BUBS.length;i++) s += '<circle r="'+BUBS[i].r.toFixed(2)+'" cx="60" cy="140" opacity="0"/>';
+    return s;
+  }
+  function grainDots(){
+    var s = "";
+    for (var i=0;i<GRAINS.length;i++) s += '<circle r="'+GRAINS[i].r.toFixed(2)+'" cx="60" cy="148" opacity="0"/>';
+    return s;
+  }
+  function coneHalfW(y){                      // 錐體在某高度的半寬
+    var t = clamp((y - CONE_TOP) / (CONE_BOT - CONE_TOP), 0, 1);
+    return (76 - 68 * t) / 2;
+  }
+  function mixHex(a, b, t){
+    function n(h,i){ return parseInt(h.substr(1+i*2,2),16); }
+    var o = "#";
+    for (var i=0;i<3;i++){
+      var v = Math.round(n(a,i) + (n(b,i) - n(a,i)) * clamp(t,0,1));
+      o += ("0" + v.toString(16)).slice(-2);
+    }
+    return o;
+  }
 
   function buildScene(){
     sceneEl.innerHTML =
@@ -513,12 +550,14 @@
             '<path d="M80,41 C74,41 71,35 70.4,28 C69.8,22.8 65.2,21.4 63.9,23.2" ' +
               'fill="none" stroke="var(--ink)" stroke-width="2.6" ' +
               'stroke-linecap="round" stroke-linejoin="round"/>' +
-            '<rect x="79" y="26" width="28" height="26" rx="6" fill="none" ' +
-              'stroke="var(--ink)" stroke-width="1.6"/>' +
-            '<line x1="80" y1="32" x2="106" y2="32" stroke="var(--steel)" stroke-width="1.1"/>' +
+            // 壺身：上窄下寬的梯形，四角圓潤
+            '<path d="M86,26 L100,26 Q104,26 104.46,29.97 L106.54,48.03 Q107,52 103,52 ' +
+              'L83,52 Q79,52 79.46,48.03 L81.54,29.97 Q82,26 86,26 Z" fill="none" ' +
+              'stroke="var(--ink)" stroke-width="1.6" stroke-linejoin="round"/>' +
+            '<line x1="81.6" y1="32" x2="104.4" y2="32" stroke="var(--steel)" stroke-width="1.1"/>' +
             '<rect x="90" y="20" width="6" height="4" rx="1.5" fill="none" ' +
               'stroke="var(--ink)" stroke-width="1.3"/>' +
-            '<path d="M107,32 C115,34 115,46 107,48" fill="none" stroke="var(--ink)" stroke-width="1.6"/>' +
+            '<path d="M104.7,32 C113,34 113,46 106.5,48" fill="none" stroke="var(--ink)" stroke-width="1.6"/>' +
           '</g>' +
           // 壺嘴落下的水柱
           '<line id="pourStream" x1="60" y1="36" x2="60" y2="'+(CONE_TOP-4)+'" ' +
@@ -529,6 +568,9 @@
         // 濾杯內的水位
         '<g clip-path="url(#coneClip)">' +
           '<rect id="coneLiq" x="20" y="'+CONE_BOT+'" width="80" height="0" fill="var(--brew-wait)"/>' +
+          '<g id="grains" fill="var(--grounds)">' + grainDots() + '</g>' +
+          '<path id="bed" fill="var(--grounds)" d=""/>' +
+          '<g id="bubbles" fill="var(--paper)">' + bubbleDots() + '</g>' +
         '</g>' +
         // 濾杯本體
         '<path d="M22,'+CONE_TOP+' H98 L64,'+CONE_BOT+' H56 Z" fill="none" ' +
@@ -568,6 +610,9 @@
       rig:    sceneEl.querySelector(".rig"),
       pour:   sceneEl.querySelector("#pourStream"),
       cone:   sceneEl.querySelector("#coneLiq"),
+      bed:    sceneEl.querySelector("#bed"),
+      grains: [].slice.call(sceneEl.querySelectorAll("#grains circle")),
+      bubbles:[].slice.call(sceneEl.querySelectorAll("#bubbles circle")),
       drip:   sceneEl.querySelector("#dripStream"),
       liq:    sceneEl.querySelector("#potLiq"),
       surface:sceneEl.querySelector("#potSurface")
@@ -661,15 +706,22 @@
     return prev + (tgt - prev) * f;               // 注水時才上升
   }
   // 分享壺液面：滴濾有滯後，注水時流下一部分，靜置時把剩下的流完
+  var BLOOM_PASS = 0.12;      // 悶蒸的水幾乎被粉吸住，只有一小部分滴得下去
+  function servedTarget(i){
+    if (i === 0 && stages.length > 1) return cums[0] * BLOOM_PASS;
+    return cums[i];
+  }
   function servedWaterG(){
     var t = totalWater();
     if (finished) return t;
     var cur  = curStep();
-    var prev = cur.stage === 0 ? 0 : cums[cur.stage - 1];
-    var tgt  = cums[cur.stage];
+    var i    = cur.stage;
+    var prev = i === 0 ? 0 : servedTarget(i - 1);
+    var tgt  = servedTarget(i);
     var d    = tgt - prev;
-    var st   = stages[cur.stage];
+    var st   = stages[i];
     var share = (st.wait > 0) ? ((st.pour > 0) ? 0.45 : 0) : 1;   // 注水期間流下的比例
+    if (i === 0) share = 0.15;                                    // 悶蒸時粉還在吸水，幾乎不滴
     var sec = cur.sec * 1000;
     var f = sec > 0 ? clamp(1 - remainMs / sec, 0, 1) : 1;
     if (cur.kind === "pour") return prev + d * share * f;
@@ -693,21 +745,90 @@
     // 濾杯水位：注水時上升，靜置時慢慢落下
     var coneP = 0;
     if (!finished && !isFresh()){
-      if (cur.kind === "pour"){
-        coneP = 0.25 + 0.75 * clamp(1 - remainMs / (cur.sec * 1000), 0, 1);
+      var fr = cur.sec > 0 ? clamp(remainMs / (cur.sec * 1000), 0, 1) : 0;
+      if (cur.stage === 0){
+        // 悶蒸：注入的水只夠浸濕粉層，水面僅略高過粉床
+        coneP = (cur.kind === "pour") ? 0.37 + 0.08 * (1 - fr) : 0.36 + 0.09 * fr;
+      } else if (cur.kind === "pour"){
+        coneP = 0.42 + 0.48 * (1 - fr);      // 最高到九成，不會滿到杯緣
       } else {
-        coneP = clamp(remainMs / (cur.sec * 1000), 0, 1);
+        coneP = 0.40 + 0.50 * fr;         // 靜置時落到粉床高度，濕粉留在杯裡
       }
     }
     var coneH = (CONE_BOT - CONE_TOP) * coneP;
     scene.cone.setAttribute("y", (CONE_BOT - coneH).toFixed(2));
     scene.cone.setAttribute("height", coneH.toFixed(2));
 
+    // 水色隨萃取進度由淡轉濃
+    var ext = waterAll > 0 ? clamp(servedWaterG() / waterAll, 0, 1) : 0;
+    scene.cone.setAttribute("fill", mixHex("#C9A375", "#6B4226", ext));
+
+    // 攪動程度：注水時翻騰，靜置時逐漸沉澱
+    var agit = 0;
+    if (!finished && !isFresh() && running){
+      var fp = cur.sec > 0 ? clamp(1 - remainMs / (cur.sec * 1000), 0, 1) : 1;
+      agit = (cur.kind === "pour") ? clamp(fp * 3, 0, 1) : clamp(1 - fp * 1.3, 0, 1);
+      if (cur.stage === 0) agit *= 0.3;       // 悶蒸只是浸濕，粉不會被沖散
+    }
+
+    // 悶蒸膨起：第一段時粉床拱起並冒氣泡
+    var bloom = 0;
+    if (!finished && !isFresh() && cur.stage === 0){
+      var fb = cur.sec > 0 ? clamp(1 - remainMs / (cur.sec * 1000), 0, 1) : 1;
+      // 注水時只是浸濕，靜置時才膨起，接近段末再緩緩消下去
+      bloom = (cur.kind === "pour")
+        ? 0.2 * fb
+        : (fb < 0.4 ? 0.2 + 0.8 * (fb / 0.4) : 1 - 0.35 * ((fb - 0.4) / 0.6));
+    }
+
+    var tsec = (typeof performance !== "undefined" ? performance.now() : Date.now()) / 1000;
+
+    // 粉床：被沖散時變薄，沉澱後回復
+    var bedH = BED_H * (1 - 0.45 * agit) * (1 + 0.25 * bloom);
+    var bedY = CONE_BOT - bedH;
+    var dome = 11 * bloom;
+    scene.bed.setAttribute("d",
+      "M20," + bedY.toFixed(2) + " Q60," + (bedY - dome).toFixed(2) +
+      " 100," + bedY.toFixed(2) + " L100," + (CONE_BOT + 2) + " L20," + (CONE_BOT + 2) + " Z");
+
+    // 氣泡：從粉層裡往上竄，衝到表面就脹大破掉，週而復始
+    for (var bi=0; bi<BUBS.length; bi++){
+      var b = BUBS[bi], be = scene.bubbles[bi];
+      if (bloom < 0.03){ be.setAttribute("opacity", "0"); continue; }
+      var bx   = 60 + b.x * 26;
+      var domeY = bedY - dome * (1 - Math.pow((bx - 60) / 40, 2));   // 拱面在該處的高度
+      var p = (tsec * b.sp + b.off) % 1;                             // 0→1 一個生命週期
+      var by = bedY + 3 - (bedY + 3 - (domeY - 1)) * p;
+      var burst = p > 0.78 ? (p - 0.78) / 0.22 : 0;                  // 最後兩成是破掉的瞬間
+      be.setAttribute("cx", bx.toFixed(2));
+      be.setAttribute("cy", (by - burst * 2.5).toFixed(2));
+      be.setAttribute("r", (b.r * (1 + burst * 1.1)).toFixed(2));
+      be.setAttribute("opacity", (bloom * 0.85 * (1 - burst) * Math.min(1, p * 6)).toFixed(2));
+    }
+
+    // 顆粒：翻騰時散在水裡，沉澱時回到粉床
+    var surfY = CONE_BOT - coneH;
+    for (var gi=0; gi<GRAINS.length; gi++){
+      var g = GRAINS[gi], el = scene.grains[gi];
+      var restY  = bedY + 1 + g.h * (bedH - 2);
+      var floatY = surfY + 2 + g.h * Math.max(0, bedY - surfY - 3);
+      var y = restY + (floatY - restY) * agit + Math.sin(tsec * g.sp + g.ph) * 2.6 * agit;
+      var x = 60 + (g.x + Math.cos(tsec * g.sp * 0.8 + g.ph) * 0.16 * agit)
+                   * Math.max(0, coneHalfW(y) - 3);
+      el.setAttribute("cx", x.toFixed(2));
+      el.setAttribute("cy", y.toFixed(2));
+      el.setAttribute("opacity", (isFresh() || finished) ? "0" : (0.45 + 0.5 * agit).toFixed(2));
+    }
+
     // 壺嘴的水柱一路落到濾杯裡的水面
     scene.pour.setAttribute("y2", (CONE_BOT - coneH - 1).toFixed(2));
     scene.pour.setAttribute("opacity", pouring ? "0.9" : "0");
     scene.pour.style.stroke = C_POUR;
-    scene.drip.setAttribute("opacity", (running && !finished && coneP > 0.04) ? "0.85" : "0");
+    var blooming = !finished && !isFresh() && cur.stage === 0;
+    scene.drip.setAttribute("opacity",
+      (running && !finished && coneP > 0.04) ? (blooming ? "0.35" : "0.85") : "0");
+    scene.drip.setAttribute("stroke-width", blooming ? "1.0" : "1.6");
+    scene.drip.style.animationDuration = blooming ? "4.2s" : "1.6s";
 
     // 分享壺：液面 = 已滴落的量（注水與靜置期間都持續上升）
     var served = servedWaterG();
