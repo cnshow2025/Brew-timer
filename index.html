@@ -660,6 +660,21 @@
     var f = sec > 0 ? clamp(1 - remainMs / sec, 0, 1) : 1;
     return prev + (tgt - prev) * f;               // 注水時才上升
   }
+  // 分享壺液面：滴濾有滯後，注水時流下一部分，靜置時把剩下的流完
+  function servedWaterG(){
+    var t = totalWater();
+    if (finished) return t;
+    var cur  = curStep();
+    var prev = cur.stage === 0 ? 0 : cums[cur.stage - 1];
+    var tgt  = cums[cur.stage];
+    var d    = tgt - prev;
+    var st   = stages[cur.stage];
+    var share = (st.wait > 0) ? ((st.pour > 0) ? 0.45 : 0) : 1;   // 注水期間流下的比例
+    var sec = cur.sec * 1000;
+    var f = sec > 0 ? clamp(1 - remainMs / sec, 0, 1) : 1;
+    if (cur.kind === "pour") return prev + d * share * f;
+    return prev + d * (share + (1 - share) * f);
+  }
   function addedAt(i){
     return cums[i] - (i === 0 ? 0 : cums[i-1]);
   }
@@ -688,17 +703,23 @@
     scene.cone.setAttribute("y", (CONE_BOT - coneH).toFixed(2));
     scene.cone.setAttribute("height", coneH.toFixed(2));
 
+    // 壺嘴的水柱一路落到濾杯裡的水面
+    scene.pour.setAttribute("y2", (CONE_BOT - coneH - 1).toFixed(2));
     scene.pour.setAttribute("opacity", pouring ? "0.9" : "0");
     scene.pour.style.stroke = C_POUR;
     scene.drip.setAttribute("opacity", (running && !finished && coneP > 0.04) ? "0.85" : "0");
 
-    // 分享壺：液面 = 目前累計水量
-    var hAll = LIQ_H * (waterAll > 0 ? clamp(water / waterAll, 0, 1) : 0);
+    // 分享壺：液面 = 已滴落的量（注水與靜置期間都持續上升）
+    var served = servedWaterG();
+    var hAll = LIQ_H * (waterAll > 0 ? clamp(served / waterAll, 0, 1) : 0);
     scene.liq.setAttribute("y", (LIQ_BOT - hAll).toFixed(2));
     scene.liq.setAttribute("height", hAll.toFixed(2));
     scene.surface.setAttribute("y1", (LIQ_BOT - hAll).toFixed(2));
     scene.surface.setAttribute("y2", (LIQ_BOT - hAll).toFixed(2));
     scene.surface.setAttribute("opacity", hAll > 2 ? "0.5" : "0");
+
+    // 落下的水穿過透明的分享壺，一路滴到目前的液面
+    scene.drip.setAttribute("y2", (LIQ_BOT - hAll - 1).toFixed(2));
 
     // ── 右側清單 ──
     for (var i=0;i<stages.length;i++){
