@@ -71,7 +71,7 @@
   .summary:active{color:var(--ink)}
 
   /* ── 左：動畫　右：段落清單 ── */
-  .stage{display:grid;grid-template-columns:40% 60%;gap:12px;align-items:stretch}
+  .stage{display:grid;grid-template-columns:30% 70%;gap:12px;align-items:stretch}
   .scene{display:flex;align-items:flex-start;justify-content:center}
   .scene svg{width:100%;height:auto;max-width:170px;display:block}
   .kettle{
@@ -112,6 +112,11 @@
     letter-spacing:.02em;
   }
   .step-water{color:var(--brew-deep);font-variant-numeric:tabular-nums}
+  .step.is-active .step-hint{line-height:1.45}
+  .step.is-active .step-water{
+    font-size:21px;font-weight:600;letter-spacing:0;
+    font-family:"Iowan Old Style",Georgia,serif;
+  }
   .subs{display:flex;flex-direction:column;gap:1px;margin-top:4px}
   .sub{
     display:flex;align-items:baseline;gap:6px;
