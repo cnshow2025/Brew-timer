@@ -9,6 +9,7 @@
   :root{
     --paper:#EFE9DC;
     --paper-2:#E6DFCF;
+    --paper-top:#F4EFE4;
     --ink:#2B2723;
     --ink-soft:#7C7466;
     --hair:#CFC6B2;
@@ -26,8 +27,7 @@
   html,body{height:100%}
   body{
     margin:0;
-    background:
-      radial-gradient(120% 80% at 50% 0%, #F5F0E5 0%, var(--paper) 45%, var(--paper-2) 100%);
+    background:var(--paper-top);
     color:var(--ink);
     font-family:"Songti TC","Noto Serif CJK TC","Noto Serif TC","Source Han Serif TC",
                 "Iowan Old Style",Georgia,serif;
@@ -41,7 +41,7 @@
   }
 
   .wrap{
-    width:100%;max-width:520px;
+    width:100%;max-width:520px;min-height:100vh;
     padding:26px 20px 34px;
     display:flex;flex-direction:column;gap:20px;
     position:relative;z-index:1;
@@ -62,64 +62,78 @@
   }
   .summary:active{color:var(--ink)}
 
-  /* ── 水壺與分享壺 ── */
-  .brewers{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:end}
-  .brewer{
-    display:flex;flex-direction:column;align-items:center;gap:8px;
-    padding:12px 2px 10px;border-radius:3px;margin:0;
-    transition:background .5s ease;
-  }
-  .brewer.is-active{background:rgba(79,97,82,.07)}
-  .brewer svg{width:100%;height:auto;max-width:104px;display:block}
-
-  .g-name{font-size:14px;letter-spacing:.18em;text-indent:.18em;color:var(--ink-soft);transition:color .4s}
-  .brewer.is-active .g-name{color:var(--moss)}
-  .brewer.is-done .g-name{color:var(--brew-deep)}
-  .g-time,.g-water{
-    font-size:12px;letter-spacing:.08em;color:var(--ink-soft);
-    font-variant-numeric:tabular-nums;font-family:"Iowan Old Style",Georgia,serif;
-  }
-  .g-water{color:var(--brew-deep)}
-  .g-phase{
-    font-size:10px;letter-spacing:.22em;text-indent:.22em;color:var(--moss);
-    opacity:0;transition:opacity .3s;min-height:1em;
-  }
-  .brewer.is-active .g-phase{opacity:1}
-  .g-index{
-    font-size:10px;letter-spacing:.2em;color:var(--hair);
-    font-family:"Iowan Old Style",Georgia,serif;
-  }
-  .liq-pour,.liq-wait{transition:fill .5s ease}
-  .stream{transition:stroke .5s ease}
+  /* ── 左：動畫　右：段落清單 ── */
+  .stage{display:grid;grid-template-columns:40% 60%;gap:12px;align-items:stretch}
+  .scene{display:flex;align-items:flex-start;justify-content:center}
+  .scene svg{width:100%;height:auto;max-width:170px;display:block}
   .kettle{
-    transform-box:view-box;transform-origin:72px 44px;
+    transform-box:view-box;transform-origin:93px 40px;
     transition:transform .55s cubic-bezier(.4,.1,.2,1);
   }
   .kettle.pouring{transform:rotate(-20deg)}
+  .rig{transform-box:view-box;transform-origin:60px 60px}
+  .rig.circling{animation:swirl 2.8s ease-in-out infinite}
+  @keyframes swirl{
+    0%,100%{transform:translate(-6px,0)}
+    25%    {transform:translate(0,-2.5px)}
+    50%    {transform:translate(6px,0)}
+    75%    {transform:translate(0,2.5px)}
+  }
 
-  .brewers.tight{gap:4px}
-  .brewers.tight .brewer{padding:10px 0 8px}
-  .brewers.tight .g-name{font-size:12px;letter-spacing:.04em;text-indent:0}
-  .brewers.tight .g-time,.brewers.tight .g-water{font-size:10px}
-  .brewers.tight .g-phase{font-size:9px;letter-spacing:.08em;text-indent:0}
-  .brewers.tight .g-index{font-size:9px}
+  .steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .step{
+    border-left:2px solid var(--hair);padding:7px 0 7px 9px;
+    transition:border-color .4s,opacity .4s;
+  }
+  .done-note .step-name{color:var(--moss)}
+  .step.is-active{border-left-color:var(--moss)}
+  .step-head{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+  .step-name{font-size:14px;letter-spacing:.1em;color:var(--ink)}
+  .step.is-active .step-name{color:var(--moss)}
+  .step-time{
+    font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums;
+    font-family:"Iowan Old Style",Georgia,serif;
+  }
+  .step-state{
+    display:inline-block;margin-left:6px;font-size:10px;letter-spacing:.1em;
+    color:var(--ink-soft);
+  }
+  .step.is-active .step-state{color:var(--moss)}
+  .step-hint{
+    margin:3px 0 0;font-size:11px;line-height:1.6;color:var(--ink-soft);
+    letter-spacing:.02em;
+  }
+  .step-water{color:var(--brew-deep);font-variant-numeric:tabular-nums}
+  .subs{display:flex;flex-direction:column;gap:1px;margin-top:4px}
+  .sub{
+    display:flex;align-items:baseline;gap:6px;
+    font-variant-numeric:tabular-nums;color:var(--ink-soft);
+    transition:color .3s;
+  }
+  .sub-label{font-size:11px;letter-spacing:.14em;white-space:nowrap}
+  .sub-time{font-size:13px;font-family:"Iowan Old Style",Georgia,serif;line-height:1.3}
+  .sub.on{color:var(--moss)}
+  .sub.on .sub-time{font-size:26px;letter-spacing:.02em;line-height:1.15}
+  .sub.off{opacity:.35}
 
-  /* ── 讀數 ── */
-  .readout{text-align:center;padding-top:2px}
-  .now{margin:0 0 4px;font-size:13px;letter-spacing:.34em;text-indent:.34em;color:var(--ink-soft)}
-  .big{
-    margin:0;font-size:60px;line-height:1.05;font-weight:400;
-    letter-spacing:.04em;font-variant-numeric:tabular-nums;
+  /* ── 左欄底部的累計計時 ── */
+  .scene-col{display:flex;flex-direction:column;align-items:center;gap:2px}
+  .elapsed{
+    margin:8px 0 0;font-size:15px;letter-spacing:.02em;color:var(--ink);
+    font-variant-numeric:tabular-nums;white-space:nowrap;
     font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
   }
-  .pour-to{
-    margin:6px 0 0;font-size:15px;letter-spacing:.18em;color:var(--brew-deep);
-    font-variant-numeric:tabular-nums;
-  }
-  .total{margin:5px 0 0;font-size:12px;letter-spacing:.16em;color:var(--ink-soft);font-variant-numeric:tabular-nums}
-  .elapsed{
-    margin:3px 0 0;font-size:12px;letter-spacing:.16em;color:var(--ink-soft);
-    font-variant-numeric:tabular-nums;font-family:"Iowan Old Style",Georgia,serif;
+  .elapsed-g{margin-left:7px;color:var(--brew-deep)}
+
+  /* ── 下半部：按鈕與設定 ── */
+  .lower{
+    flex:1;
+    margin:10px -20px -34px;
+    padding:22px 20px 34px;
+    background:var(--paper-2);
+    box-shadow:0 0 0 100vmax var(--paper-2);
+    clip-path:inset(0 -100vmax);
+    display:flex;flex-direction:column;gap:20px;
   }
 
   /* ── 控制 ── */
@@ -206,7 +220,7 @@
     .primary{padding:12px 28px}
   }
   @media (prefers-reduced-motion:reduce){
-    .stream{animation:none!important}
+    #pourStream,#dripStream,.rig{animation:none!important}
     *{transition-duration:.01ms!important}
   }
 </style>
@@ -221,15 +235,15 @@
     <button class="summary" id="summaryLine" aria-label="開啟沖煮設定"></button>
   </header>
 
-  <section class="brewers" id="brewers"></section>
-
-  <section class="readout">
-    <p class="now" id="nowLabel">準備</p>
-    <p class="big" id="bigTime">00:10</p>
-    <p class="pour-to" id="pourTo">注到 36 g</p>
-    <p class="total" id="totalLine">本段 00:30 · 全程 02:00</p>
-    <p class="elapsed" id="elapsedLine">累計 00:00 / 02:00</p>
+  <section class="stage">
+    <div class="scene-col">
+      <div class="scene" id="scene"></div>
+      <p class="elapsed" id="elapsedLine">00:00<span class="elapsed-g">0 g</span></p>
+    </div>
+    <ol class="steps" id="stepList"></ol>
   </section>
+
+  <div class="lower">
 
   <div class="controls">
     <button class="primary" id="startBtn">開始</button>
@@ -265,6 +279,13 @@
     </div>
 
     <div class="block">
+      <div class="block-head">
+        <span class="block-label">注水滴水聲</span>
+        <button type="button" class="chip" id="sfxToggle" aria-pressed="true">開啟</button>
+      </div>
+    </div>
+
+    <div class="block">
       <p class="set-title" id="stageTitle">段落設定</p>
       <div id="setRows"></div>
     </div>
@@ -276,6 +297,8 @@
       注水轉等待為單聲、段落切換為兩聲、結束為三聲，並伴隨震動（震動僅部分 Android 裝置支援）。
     </p>
   </section>
+
+  </div>
 
 </main>
 
@@ -345,6 +368,7 @@
   // ── 設定值 ──
   var dose = 18, ratio = 15, recipeId = "three";
   var customStages = cloneStages(DEFAULT_CUSTOM);
+  var waterSfx = true;   // 注水時的背景水聲
   var stages = [];      // 目前生效的段落
   var cums = [];        // 每段的累計注水目標（克）
   var steps = [];       // 展開後的子段序列
@@ -353,12 +377,9 @@
   var stepIdx = 0, running = false, finished = false, remainMs = 0, endAt = 0;
 
   // ── DOM ──
-  var brewersEl   = document.getElementById("brewers");
+  var sceneEl     = document.getElementById("scene");
+  var stepListEl  = document.getElementById("stepList");
   var setRowsEl   = document.getElementById("setRows");
-  var nowLabel    = document.getElementById("nowLabel");
-  var bigTime     = document.getElementById("bigTime");
-  var pourToEl    = document.getElementById("pourTo");
-  var totalLine   = document.getElementById("totalLine");
   var elapsedLine = document.getElementById("elapsedLine");
   var startBtn    = document.getElementById("startBtn");
   var resetBtn    = document.getElementById("resetBtn");
@@ -373,8 +394,8 @@
   var recipeTime  = document.getElementById("recipeTime");
   var recipeNote  = document.getElementById("recipeNote");
   var stageTitle  = document.getElementById("stageTitle");
+  var sfxToggle   = document.getElementById("sfxToggle");
 
-  var views = [];
 
   // ── 工具 ──
   function clamp(v,a,b){ return Math.min(b, Math.max(a, v)); }
@@ -416,7 +437,7 @@
   function save(){
     try{
       localStorage.setItem(KEY, JSON.stringify({
-        dose:dose, ratio:ratio, recipe:recipeId, custom:customStages
+        dose:dose, ratio:ratio, recipe:recipeId, custom:customStages, sfx:waterSfx
       }));
     }catch(e){}
   }
@@ -425,6 +446,7 @@
       var raw = localStorage.getItem(KEY);
       if (!raw) return;
       var d = JSON.parse(raw);
+      if (typeof d.sfx === "boolean") waterSfx = d.sfx;
       if (DOSES.indexOf(d.dose) >= 0) dose = d.dose;
       if (RATIOS.indexOf(d.ratio) >= 0) ratio = d.ratio;
       if (typeof d.recipe === "string" && recipeOf(d.recipe).id === d.recipe) recipeId = d.recipe;
@@ -458,88 +480,140 @@
     while (cums.length < stages.length) cums.push(t);
   }
 
-  // ── 水壺 SVG ──
-  var LIQ_TOP = 90, LIQ_BOT = 147;
+  // ── 場景：水壺 → 濾杯 → 分享壺 ──
+  var CONE_TOP = 96, CONE_BOT = 150;          // 濾杯錐體
+  var LIQ_TOP = 178, LIQ_BOT = 254;           // 分享壺液面範圍
   var LIQ_H = LIQ_BOT - LIQ_TOP;
+  var scene = {};
 
-  function buildBrewer(i){
-    var uid = "g" + i;
-    var el = document.createElement("figure");
-    el.className = "brewer";
-    el.innerHTML =
-      '<svg viewBox="0 0 100 160" role="img" aria-label="第 '+(i+1)+' 段注水">' +
+  function buildScene(){
+    sceneEl.innerHTML =
+      '<svg viewBox="0 0 120 270" role="img" aria-label="手沖示意">' +
         '<defs>' +
-          '<clipPath id="'+uid+'-liq"><path d="M30,'+(LIQ_TOP-2)+' V138 A9,9 0 0 0 39,147 H61 A9,9 0 0 0 70,138 V'+(LIQ_TOP-2)+' Z"/></clipPath>' +
+          '<clipPath id="coneClip"><path d="M22,'+CONE_TOP+' H98 L64,'+CONE_BOT+' H56 Z"/></clipPath>' +
+          '<clipPath id="potClip"><path d="M30,176 V240 A11,11 0 0 0 41,251 H79 A11,11 0 0 0 90,240 V176 Z"/></clipPath>' +
         '</defs>' +
 
-        // ── 水壺（可傾倒） ──
-        '<g class="kettle">' +
-          '<path d="M58,43 C50,43 45,37 44,28" fill="none" stroke="var(--ink)" ' +
-            'stroke-width="2.6" stroke-linecap="round"/>' +
-          '<rect x="58" y="30" width="28" height="26" rx="6" fill="none" ' +
-            'stroke="var(--ink)" stroke-width="1.6"/>' +
-          '<line x1="59" y1="36" x2="85" y2="36" stroke="var(--steel)" stroke-width="1.1"/>' +
-          '<rect x="69" y="24" width="6" height="4" rx="1.5" fill="none" ' +
-            'stroke="var(--ink)" stroke-width="1.3"/>' +
-          '<path d="M86,36 C94,38 94,50 86,52" fill="none" stroke="var(--ink)" stroke-width="1.6"/>' +
+        // 水壺
+        '<g class="rig">' +
+          '<g class="kettle">' +
+            '<path d="M80,41 C74,41 71,35 70.4,28 C69.8,22.8 65.2,21.4 63.9,23.2" ' +
+              'fill="none" stroke="var(--ink)" stroke-width="2.6" ' +
+              'stroke-linecap="round" stroke-linejoin="round"/>' +
+            '<rect x="79" y="26" width="28" height="26" rx="6" fill="none" ' +
+              'stroke="var(--ink)" stroke-width="1.6"/>' +
+            '<line x1="80" y1="32" x2="106" y2="32" stroke="var(--steel)" stroke-width="1.1"/>' +
+            '<rect x="90" y="20" width="6" height="4" rx="1.5" fill="none" ' +
+              'stroke="var(--ink)" stroke-width="1.3"/>' +
+            '<path d="M107,32 C115,34 115,46 107,48" fill="none" stroke="var(--ink)" stroke-width="1.6"/>' +
+          '</g>' +
+          // 壺嘴落下的水柱
+          '<line id="pourStream" x1="60" y1="36" x2="60" y2="'+(CONE_TOP-4)+'" ' +
+            'stroke="var(--brew-pour)" stroke-width="1.8" stroke-linecap="round" ' +
+            'stroke-dasharray="3 6" opacity="0"/>' +
         '</g>' +
 
-        // ── 落水 ──
-        '<line class="stream" x1="40" y1="43" x2="42" y2="'+(LIQ_TOP-4)+'" ' +
-          'stroke="var(--brew-pour)" stroke-width="1.8" stroke-linecap="round" ' +
-          'stroke-dasharray="3 6" opacity="0"/>' +
+        // 濾杯內的水位
+        '<g clip-path="url(#coneClip)">' +
+          '<rect id="coneLiq" x="20" y="'+CONE_BOT+'" width="80" height="0" fill="var(--brew-wait)"/>' +
+        '</g>' +
+        // 濾杯本體
+        '<path d="M22,'+CONE_TOP+' H98 L64,'+CONE_BOT+' H56 Z" fill="none" ' +
+          'stroke="var(--ink)" stroke-width="1.6" stroke-linejoin="round"/>' +
+        '<line x1="20" y1="'+CONE_TOP+'" x2="100" y2="'+CONE_TOP+'" stroke="var(--ink)" ' +
+          'stroke-width="1.8" stroke-linecap="round"/>' +
+        '<line x1="38" y1="104" x2="58" y2="142" stroke="var(--hair)" stroke-width="1"/>' +
+        '<line x1="60" y1="102" x2="60" y2="142" stroke="var(--hair)" stroke-width="1"/>' +
+        '<line x1="82" y1="104" x2="62" y2="142" stroke="var(--hair)" stroke-width="1"/>' +
+        '<rect x="56" y="'+CONE_BOT+'" width="8" height="6" fill="none" ' +
+          'stroke="var(--ink)" stroke-width="1.4"/>' +
 
-        // ── 分享壺裡的咖啡液（下層＝注水、上層＝等待） ──
-        '<g clip-path="url(#'+uid+'-liq)">' +
-          '<rect class="liq-pour" x="28" y="'+LIQ_BOT+'" width="44" height="0" fill="var(--brew-pour)"/>' +
-          '<rect class="liq-wait" x="28" y="'+LIQ_BOT+'" width="44" height="0" fill="var(--brew-wait)"/>' +
-          '<line class="surface" x1="30" y1="'+LIQ_BOT+'" x2="70" y2="'+LIQ_BOT+'" ' +
+        // 濾杯滴下的咖啡
+        '<line id="dripStream" x1="60" y1="'+(CONE_BOT+8)+'" x2="60" y2="172" ' +
+          'stroke="var(--brew-deep)" stroke-width="1.6" stroke-linecap="round" ' +
+          'stroke-dasharray="2 7" opacity="0"/>' +
+
+        // 分享壺裡的咖啡
+        '<g clip-path="url(#potClip)">' +
+          '<rect id="potLiq" x="28" y="'+LIQ_BOT+'" width="64" height="0" fill="var(--brew-deep)"/>' +
+          '<line id="potSurface" x1="30" y1="'+LIQ_BOT+'" x2="90" y2="'+LIQ_BOT+'" ' +
             'stroke="#FFFFFF" stroke-width="1.2" opacity="0"/>' +
         '</g>' +
-
-        // ── 分享壺 ──
-        '<path d="M30,86 H70" stroke="var(--ink)" stroke-width="1.6" stroke-linecap="round" fill="none"/>' +
-        '<path d="M72,88 C79,92 79,100 72,103" fill="none" stroke="var(--ink)" stroke-width="1.5"/>' +
-        '<path d="M30,86 V138 A9,9 0 0 0 39,147 H61 A9,9 0 0 0 70,138 V86" ' +
+        // 分享壺本體
+        '<path d="M30,172 H90" stroke="var(--ink)" stroke-width="1.6" stroke-linecap="round"/>' +
+        '<path d="M92,175 C100,180 100,190 92,194" fill="none" stroke="var(--ink)" stroke-width="1.5"/>' +
+        '<path d="M30,172 V240 A11,11 0 0 0 41,251 H79 A11,11 0 0 0 90,240 V172" ' +
           'fill="none" stroke="var(--glass)" stroke-width="1.4" stroke-linejoin="round"/>' +
-        '<line x1="33" y1="'+(LIQ_BOT-19)+'" x2="38" y2="'+(LIQ_BOT-19)+'" stroke="var(--hair)" stroke-width="1"/>' +
-        '<line x1="33" y1="'+(LIQ_BOT-38)+'" x2="38" y2="'+(LIQ_BOT-38)+'" stroke="var(--hair)" stroke-width="1"/>' +
-        '<line x1="34" y1="92" x2="34" y2="112" stroke="#FFFFFF" stroke-width="1.4" ' +
+        '<line x1="34" y1="'+(LIQ_BOT-25)+'" x2="40" y2="'+(LIQ_BOT-25)+'" stroke="var(--hair)" stroke-width="1"/>' +
+        '<line x1="34" y1="'+(LIQ_BOT-50)+'" x2="40" y2="'+(LIQ_BOT-50)+'" stroke="var(--hair)" stroke-width="1"/>' +
+        '<line x1="35" y1="180" x2="35" y2="202" stroke="#FFFFFF" stroke-width="1.4" ' +
           'opacity=".45" stroke-linecap="round"/>' +
-      '</svg>' +
-      '<figcaption style="display:flex;flex-direction:column;align-items:center;gap:3px">' +
-        '<span class="g-index">'+(i+1)+'</span>' +
-        '<span class="g-name"></span>' +
-        '<span class="g-water"></span>' +
-        '<span class="g-time"></span>' +
-        '<span class="g-phase"></span>' +
-      '</figcaption>';
+      '</svg>';
 
-    brewersEl.appendChild(el);
-    views.push({
-      root: el,
-      kettle: el.querySelector(".kettle"),
-      liqPour: el.querySelector(".liq-pour"),
-      liqWait: el.querySelector(".liq-wait"),
-      surface: el.querySelector(".surface"),
-      stream: el.querySelector(".stream"),
-      name: el.querySelector(".g-name"),
-      water: el.querySelector(".g-water"),
-      time: el.querySelector(".g-time"),
-      phase: el.querySelector(".g-phase")
-    });
+    scene = {
+      kettle: sceneEl.querySelector(".kettle"),
+      rig:    sceneEl.querySelector(".rig"),
+      pour:   sceneEl.querySelector("#pourStream"),
+      cone:   sceneEl.querySelector("#coneLiq"),
+      drip:   sceneEl.querySelector("#dripStream"),
+      liq:    sceneEl.querySelector("#potLiq"),
+      surface:sceneEl.querySelector("#potSurface")
+    };
   }
-  function buildBrewers(){
-    brewersEl.innerHTML = "";
-    views = [];
-    for (var i=0;i<stages.length;i++) buildBrewer(i);
-    brewersEl.style.gridTemplateColumns = "repeat(" + stages.length + ",1fr)";
-    brewersEl.classList.toggle("tight", stages.length > 3);
+
+  // ── 右側段落清單 ──
+  var rows = [];
+  function hintOf(i){
+    var s = stages[i], parts = [];
+    if (s.pour > 0) parts.push('繞圈注水至 <span class="step-water">' + cums[i] + ' g</span>');
+    else parts.push("不注水");
+    if (s.wait > 0) parts.push("靜置 " + s.wait + " 秒");
+    return parts.join("，");
+  }
+  var doneEl = null;
+  function buildStepList(){
+    stepListEl.innerHTML = "";
+    rows = [];
+    stages.forEach(function(s, i){
+      var li = document.createElement("li");
+      li.className = "step";
+      li.innerHTML =
+        '<div class="step-head">' +
+          '<span><span class="step-name"></span><span class="step-state"></span></span>' +
+          '<span class="step-time"></span>' +
+        '</div>' +
+        '<p class="step-hint"></p>' +
+        '<div class="subs">' +
+          '<span class="sub" data-kind="pour"><span class="sub-label">注水</span>' +
+            '<span class="sub-time"></span></span>' +
+          '<span class="sub" data-kind="wait"><span class="sub-label">靜置</span>' +
+            '<span class="sub-time"></span></span>' +
+        '</div>';
+      stepListEl.appendChild(li);
+      rows.push({
+        root: li,
+        name: li.querySelector(".step-name"),
+        state: li.querySelector(".step-state"),
+        time: li.querySelector(".step-time"),
+        hint: li.querySelector(".step-hint"),
+        pour: li.querySelector('.sub[data-kind="pour"]'),
+        wait: li.querySelector('.sub[data-kind="wait"]'),
+        pourTime: li.querySelector('.sub[data-kind="pour"] .sub-time'),
+        waitTime: li.querySelector('.sub[data-kind="wait"] .sub-time')
+      });
+    });
+
+    doneEl = document.createElement("li");
+    doneEl.className = "step is-active done-note";
+    doneEl.hidden = true;
+    stepListEl.appendChild(doneEl);
   }
 
   // 落水動畫
   var st = document.createElement("style");
-  st.textContent = "@keyframes fall{to{stroke-dashoffset:-70}}.stream{animation:fall .9s linear infinite}";
+  st.textContent = "@keyframes fall{to{stroke-dashoffset:-70}}" +
+    "#pourStream{animation:fall .9s linear infinite}" +
+    "#dripStream{animation:fall 1.6s linear infinite}";
   document.head.appendChild(st);
 
   // ── 繪製 ──
@@ -562,6 +636,17 @@
     if (t <= 0) return finished ? 1 : (i < curStep().stage ? 1 : 0);
     return clamp(stageElapsedMs(i) / t, 0, 1);
   }
+  function currentWaterG(){
+    var t = totalWater();
+    if (finished) return t;
+    var cur = curStep();
+    var prev = cur.stage === 0 ? 0 : cums[cur.stage - 1];
+    var tgt  = cums[cur.stage];
+    if (cur.kind === "wait") return tgt;          // 等待時液面停住
+    var sec = cur.sec * 1000;
+    var f = sec > 0 ? clamp(1 - remainMs / sec, 0, 1) : 1;
+    return prev + (tgt - prev) * f;               // 注水時才上升
+  }
   function addedAt(i){
     return cums[i] - (i === 0 ? 0 : cums[i-1]);
   }
@@ -570,67 +655,85 @@
     var cur = curStep();
     var css = getComputedStyle(document.documentElement);
     var C_POUR = css.getPropertyValue("--brew-pour").trim() || "#5C3A22";
+    var water = currentWaterG(), waterAll = totalWater();
 
+    // ── 場景 ──
+    var pouring = running && !finished && cur.kind === "pour";
+    scene.kettle.classList.toggle("pouring", !finished && cur.kind === "pour");
+    scene.rig.classList.toggle("circling", pouring);   // 注水時繞圈
+
+    // 濾杯水位：注水時上升，靜置時慢慢落下
+    var coneP = 0;
+    if (!finished && !isFresh()){
+      if (cur.kind === "pour"){
+        coneP = 0.25 + 0.75 * clamp(1 - remainMs / (cur.sec * 1000), 0, 1);
+      } else {
+        coneP = clamp(remainMs / (cur.sec * 1000), 0, 1);
+      }
+    }
+    var coneH = (CONE_BOT - CONE_TOP) * coneP;
+    scene.cone.setAttribute("y", (CONE_BOT - coneH).toFixed(2));
+    scene.cone.setAttribute("height", coneH.toFixed(2));
+
+    scene.pour.setAttribute("opacity", pouring ? "0.9" : "0");
+    scene.pour.style.stroke = C_POUR;
+    scene.drip.setAttribute("opacity", (running && !finished && coneP > 0.04) ? "0.85" : "0");
+
+    // 分享壺：液面 = 目前累計水量
+    var hAll = LIQ_H * (waterAll > 0 ? clamp(water / waterAll, 0, 1) : 0);
+    scene.liq.setAttribute("y", (LIQ_BOT - hAll).toFixed(2));
+    scene.liq.setAttribute("height", hAll.toFixed(2));
+    scene.surface.setAttribute("y1", (LIQ_BOT - hAll).toFixed(2));
+    scene.surface.setAttribute("y2", (LIQ_BOT - hAll).toFixed(2));
+    scene.surface.setAttribute("opacity", hAll > 2 ? "0.5" : "0");
+
+    // ── 右側清單 ──
     for (var i=0;i<stages.length;i++){
-      var v = views[i], p = progressOf(i), s = stages[i];
+      var r = rows[i], s = stages[i];
       var isActive = (i === cur.stage) && !finished;
-      var total = stageSec(i);
-      var pourFrac = total > 0 ? s.pour / total : 0;
+      var isDone = finished || i < cur.stage;
 
-      // 水壺：注水中傾倒，其餘直立
-      v.kettle.classList.toggle("pouring", isActive && cur.kind === "pour");
+      r.name.textContent = s.name;
+      r.state.textContent = isDone ? "完成" : (isActive ? PHASE[cur.kind] + "中" : "待沖");
+      r.time.textContent = fmt(isDone ? 0 : stageRemainMs(i));
+      r.hint.innerHTML = hintOf(i);
 
-      // 分享壺：液面上升，下層＝注水、上層＝等待
-      var hAll  = LIQ_H * p;
-      var hPour = LIQ_H * Math.min(p, pourFrac);
-      var hWait = hAll - hPour;
-      v.liqPour.setAttribute("y", (LIQ_BOT - hPour).toFixed(2));
-      v.liqPour.setAttribute("height", hPour.toFixed(2));
-      v.liqWait.setAttribute("y", (LIQ_BOT - hAll).toFixed(2));
-      v.liqWait.setAttribute("height", Math.max(0, hWait).toFixed(2));
+      (function(r, s, isActive, isDone){
+        ["pour","wait"].forEach(function(kind){
+          var el = r[kind], tEl = r[kind + "Time"], sec = s[kind];
+          var live = isActive && cur.kind === kind;
+          var passed = isDone || (isActive && cur.kind === "wait" && kind === "pour");
+          el.hidden = sec <= 0;
+          el.classList.toggle("on", live);
+          el.classList.toggle("off", passed && !live);
+          tEl.textContent = live ? fmt(remainMs) : (passed ? "00:00" : fmt(sec * 1000));
+        });
+      })(r, s, isActive, isDone);
 
-      var surfaceY = LIQ_BOT - hAll;
-      v.surface.setAttribute("y1", surfaceY.toFixed(2));
-      v.surface.setAttribute("y2", surfaceY.toFixed(2));
-      v.surface.setAttribute("opacity", hAll > 2 ? "0.5" : "0");
-
-      // 落水只在進行中且正在注水時出現
-      v.stream.setAttribute("opacity", (isActive && running && cur.kind === "pour") ? "0.9" : "0");
-      v.stream.setAttribute("y2", Math.max(LIQ_TOP - 4, surfaceY - 3).toFixed(2));
-      v.stream.style.stroke = C_POUR;
-
-      v.name.textContent = s.name;
-      v.water.textContent = addedAt(i) > 0 ? (cums[i] + " g") : "—";
-      v.time.textContent = fmt(finished ? 0 : stageRemainMs(i));
-      v.phase.textContent = isActive ? PHASE[cur.kind] : "";
-
-      v.root.classList.toggle("is-active", isActive);
-      v.root.classList.toggle("is-done", finished || i < cur.stage);
+      r.root.classList.toggle("is-active", isActive);
+      r.root.classList.toggle("is-done", isDone);
+      r.root.hidden = isDone;          // 做完就收起來，後面的往上遞補
     }
 
-    if (finished){
-      nowLabel.textContent = "完成";
-      bigTime.textContent = "00:00";
-      pourToEl.textContent = "共 " + totalWater() + " g";
-      totalLine.textContent = "本段 00:00 · 全程 " + fmt(totalSec()*1000);
-    } else {
-      nowLabel.textContent = isFresh()
-        ? "準備"
-        : stages[cur.stage].name + " · " + PHASE[cur.kind];
-      bigTime.textContent = fmt(remainMs);
-      pourToEl.textContent = addedAt(cur.stage) > 0
-        ? "注到 " + cums[cur.stage] + " g"
-        : "不注水，等落下";
-      totalLine.textContent = "本段 " + fmt(stageRemainMs(cur.stage)) +
-                              " · 全程 " + fmt(totalSec()*1000);
+    if (doneEl){
+      doneEl.hidden = !finished;
+      if (finished){
+        doneEl.innerHTML =
+          '<div class="step-head"><span class="step-name">沖煮完成</span></div>' +
+          '<p class="step-hint">總時間 ' + fmt(totalSec()*1000) +
+          '，共 <span class="step-water">' + totalWater() + ' g</span></p>';
+      }
     }
 
-    elapsedLine.textContent = "累計 " + fmtDown(elapsedMs()) + " / " + fmt(totalSec()*1000);
+    elapsedLine.innerHTML = fmtDown(elapsedMs()) +
+      '<span class="elapsed-g">' + Math.round(water) + ' g</span>';
+    syncWater();
 
     startBtn.textContent = finished ? "再沖一次" : (running ? "暫停" : (isFresh() ? "開始" : "繼續"));
     gearBtn.disabled = running;
     summaryLine.textContent =
-      dose + " g · 1:" + ratio + " · " + recipeOf(recipeId).name + " · " + totalWater() + " g";
+      dose + " g · 1:" + ratio + " · " + recipeOf(recipeId).name +
+      " · " + totalWater() + " g · " + fmt(totalSec()*1000);
   }
 
   function isFresh(){
@@ -668,6 +771,7 @@
     } else {
       running = false;
       finished = true;
+      waterOff();
       chime([880, 660, 523], 0.32, 0.24);    // 結束
       buzz([200,100,200,100,340]);
       releaseWake();
@@ -686,12 +790,14 @@
   }
   function pause(){
     running = false;
+    waterOff();
     remainMs = Math.max(0, endAt - performance.now());
     releaseWake();
     render();
   }
   function reset(){
     running = false; finished = false; stepIdx = 0;
+    waterOff();
     remainMs = steps[0].sec * 1000;
     releaseWake();
     render();
@@ -742,7 +848,15 @@
       recipeChips.appendChild(b);
     });
   }
+  sfxToggle.addEventListener("click", function(){
+    waterSfx = !waterSfx;
+    if (!waterSfx) waterOff();
+    save(); syncChips(); syncWater();
+  });
   function syncChips(){
+    sfxToggle.textContent = waterSfx ? "開啟" : "關閉";
+    sfxToggle.classList.toggle("on", waterSfx);
+    sfxToggle.setAttribute("aria-pressed", waterSfx ? "true" : "false");
     [].forEach.call(doseChips.children, function(b){
       b.classList.toggle("on", +b.dataset.dose === dose);
     });
@@ -779,7 +893,8 @@
     stages = isCustom() ? customStages : cloneStages(r.stages);
     buildSteps();
     computeCums();
-    buildBrewers();
+    buildScene();
+    buildStepList();
     buildRows();
     reset();
     syncChips();
@@ -889,6 +1004,39 @@
       });
     }catch(e){}
   }
+  // ── 注水滴水聲：合成水滴，隨機間隔 ──
+  var nextDripAt = 0;
+  var DRIP_VOL = 0.055;
+
+  function drip(){
+    if (!ac) return;
+    try{
+      var t0 = ac.currentTime;
+      var f0 = 780 + Math.random() * 620;          // 每滴音高略有不同
+      var osc = ac.createOscillator();
+      var gain = ac.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(f0, t0);
+      osc.frequency.exponentialRampToValueAtTime(f0 * 0.42, t0 + 0.085);
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(DRIP_VOL * (0.7 + Math.random() * 0.5), t0 + 0.006);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
+      osc.connect(gain); gain.connect(ac.destination);
+      osc.start(t0); osc.stop(t0 + 0.2);
+    }catch(e){}
+  }
+  function waterOff(){ nextDripAt = 0; }
+  function syncWater(){
+    if (!(running && !finished && curStep().kind === "pour")){ nextDripAt = 0; return; }
+    if (!waterSfx || !ac) return;
+    var t = performance.now();
+    if (!nextDripAt) nextDripAt = t;
+    if (t >= nextDripAt){
+      drip();
+      nextDripAt = t + 240 + Math.random() * 420;   // 滴、滴答、滴……
+    }
+  }
+
   function buzz(pattern){
     try{ if (navigator.vibrate) navigator.vibrate(pattern); }catch(e){}
   }
